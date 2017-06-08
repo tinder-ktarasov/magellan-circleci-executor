@@ -1,4 +1,4 @@
-import { spawn, execFileSync } from "child_process";
+import { spawn, execFile } from "child_process";
 import logger from "testarmada-logger";
 import path from 'path';
 import settings from "./settings";
@@ -29,11 +29,11 @@ export default {
   execute: (testRun, options, mocks = null) => {
     logger.prefix = "CircleCI Executor";
 
-    let ispawnSync = execFileSync;
+    let ispawnCb = execFile;
     let ispawn = spawn;
 
     if (mocks && mocks.fork) {
-      ispawnSync = mocks.fork;
+      ispawnCb = mocks.forkCb;
       ispawn = mocks.fork;
     }
 
@@ -43,33 +43,50 @@ export default {
     // No IPC via SSH
     const sshOptions = Object.assign({}, options, { stdio: ['pipe', 'pipe', 'pipe' ] });
 
-    const mkdirOutput = ispawnSync('ssh',
-      [`node${nodeIndex}`, 'mkdir', '-p', fullPath],
-      sshOptions);
-    logger.log(mkdirOutput);
+    return Promise.resolve()
+      .then(() => new Promise((resolve, reject) => {
+        ispawnCb('ssh',
+          [`node${nodeIndex}`, 'mkdir', '-p', fullPath],
+          sshOptions,
+          (err, stdout, stderr) => {
+            logger.log(stdout + stderr);
+            if (err) {
+              reject(err);
+            }
+            resolve();
+          }
+        )
+      }))
+      .then(() => new Promise((resolve, reject) => {
+        ispawnCb('rsync', [
+            '-rpt', '-z', '-vv', '--delete',
+            '-e', 'ssh -Tx -c aes128-ctr -o Compression=no',
+            fullPath, `node${nodeIndex}:"${fullPath}/.."`],
+          sshOptions,
+          (err, stdout, stderr) => {
+            logger.log(stdout + stderr);
+            if (err) {
+              reject(err);
+            }
+            resolve();
+          })
+      }))
+      .then(() => {
+        let remoteArgs = ['-xC', '-c', 'aes128-ctr', `node${nodeIndex}`, '--'];
+        const runPath = path.resolve('.');
+        remoteArgs = remoteArgs.concat(['cd', runPath, ';']);
 
-    const copyOutput = ispawnSync('rsync', [
-        '-rpt', '-z', '-vv', '--delete',
-        '-e', 'ssh -Tx -c aes128-ctr -o Compression=no',
-        fullPath, `node${nodeIndex}:"${fullPath}/.."`],
-      sshOptions);
-    logger.log(copyOutput);
+        settings.config.exportedEnvVars.forEach(env => {
+          const varName = env.toUpperCase();
+          const value = (typeof process.env[varName] === undefined) ? '' : process.env[varName];
+          remoteArgs = remoteArgs.concat(['export', `"${varName}"="${value}"`, ';']);
+        });
 
-    let remoteArgs = ['-xC', '-c', 'aes128-ctr', `node${nodeIndex}`, '--'];
-    const runPath = path.resolve('.');
-    remoteArgs = remoteArgs.concat(['cd', runPath, ';']);
+        remoteArgs.push(testRun.getCommand());
+        remoteArgs.push( '"'+testRun.getArguments().join('" "') + '"' );
 
-    settings.config.exportedEnvVars.forEach(env => {
-      const varName = env.toUpperCase();
-      const value = (typeof process.env[varName] === undefined) ? '' : process.env[varName];
-      remoteArgs = remoteArgs.concat(['export', `"${varName}"="${value}"`, ';']);
-    });
-
-    remoteArgs.push(testRun.getCommand());
-    remoteArgs.push( '"'+testRun.getArguments().join('" "') + '"' );
-    logger.log(remoteArgs);
-
-    return ispawn('ssh', remoteArgs, sshOptions);
+        return ispawn('ssh', remoteArgs, sshOptions);
+      });
   },
 
   summerizeTest: (magellanBuildId, testResult, callback) => {
