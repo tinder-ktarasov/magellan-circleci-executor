@@ -1,7 +1,7 @@
 {
-  "name": "testarmada-magellan-local-executor",
-  "version": "2.0.0",
-  "description": "test executor for magellan test to run in local selenium env",
+  "name": "custom-magellan-circleci-executor",
+  "version": "2.0.0-custom-remote-0.14",
+  "description": "test executor to run magellan tests via SSH (based on local-executor)",
   "main": "index.js",
   "scripts": {
     "build": "./node_modules/.bin/babel src --out-dir lib --source-maps",
@@ -14,7 +14,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/TestArmada/magellan-local-executor.git"
+    "url": "git+https://github.com/tinder-ktarasov/magellan-circleci-executor.git"
   },
   "keywords": [
     "testarmada",
@@ -22,7 +22,7 @@
     "nightwatch",
     "saucelabs"
   ],
-  "author": "Lei Zhu <thunderzhulei@gmail.com>",
+  "author": "Lei Zhu <thunderzhulei@gmail.com>, K Tarasov <k.tarasov@pflb.us>",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/TestArmada/magellan-local-executor/issues"
