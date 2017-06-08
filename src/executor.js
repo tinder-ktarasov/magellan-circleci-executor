@@ -50,12 +50,12 @@ export default {
 
     const copyOutput = ispawnSync('rsync', [
         '-rpt', '-z', '-vv', '--delete',
-        '-e', 'ssh',
+        '-e', 'ssh -Tx -c aes128-ctr -o Compression=no',
         fullPath, `node${nodeIndex}:"${fullPath}/.."`],
       sshOptions);
     logger.log(copyOutput);
 
-    let remoteArgs = [`node${nodeIndex}`, '--'];
+    let remoteArgs = ['-xC', '-c', 'aes128-ctr', `node${nodeIndex}`, '--'];
     const runPath = path.resolve('.');
     remoteArgs = remoteArgs.concat(['cd', runPath, ';']);
 
