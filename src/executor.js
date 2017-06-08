@@ -49,7 +49,7 @@ export default {
           [`node${nodeIndex}`, 'mkdir', '-p', fullPath],
           sshOptions,
           (err, stdout, stderr) => {
-            logger.log(stdout + stderr);
+            logger.debug(stdout + stderr);
             if (err) {
               reject(err);
             }
@@ -64,7 +64,7 @@ export default {
             fullPath, `node${nodeIndex}:"${fullPath}/.."`],
           sshOptions,
           (err, stdout, stderr) => {
-            logger.log(stdout + stderr);
+            logger.debug(stdout + stderr);
             if (err) {
               reject(err);
             }
@@ -84,6 +84,8 @@ export default {
 
         remoteArgs.push(testRun.getCommand());
         remoteArgs.push( '"'+testRun.getArguments().join('" "') + '"' );
+
+        logger.debug(remoteArgs);
 
         return ispawn('ssh', remoteArgs, sshOptions);
       });
