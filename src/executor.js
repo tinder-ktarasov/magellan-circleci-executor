@@ -40,18 +40,19 @@ export default {
     const nodeIndex = Number(settings.config.firstNode) + Number(testRun.workerIndex) - 1; // workerIndex is one based
     const fullPath = path.resolve(testRun.tempAssetPath);
 
-    const syncOptions = Object.assign({}, options, { stdio: ['pipe', 'pipe', 'pipe' ] });
+    // No IPC via SSH
+    const sshOptions = Object.assign({}, options, { stdio: ['pipe', 'pipe', 'pipe' ] });
 
     const mkdirOutput = ispawnSync('ssh',
       [`node${nodeIndex}`, 'mkdir', '-p', fullPath],
-      syncOptions);
+      sshOptions);
     logger.log(mkdirOutput);
 
     const copyOutput = ispawnSync('rsync', [
         '-rpt', '-z', '-vv', '--delete',
         '-e', 'ssh',
         fullPath, `node${nodeIndex}:"${fullPath}/.."`],
-      syncOptions);
+      sshOptions);
     logger.log(copyOutput);
 
     let remoteArgs = [`node${nodeIndex}`, '--'];
@@ -68,7 +69,7 @@ export default {
     remoteArgs.push( '"'+testRun.getArguments().join('" "') + '"' );
     logger.log(remoteArgs);
 
-    return ispawn('ssh', remoteArgs, options);
+    return ispawn('ssh', remoteArgs, sshOptions);
   },
 
   summerizeTest: (magellanBuildId, testResult, callback) => {
